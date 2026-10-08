@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vakinha - Campanha</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+      :root {
+        --bg: #f1f1f1;
+        --panel: #ffffff;
+        --panel-alt: #f8f8f8;
+        --line: #e5e5e5;
+        --text: #1f1f1f;
+        --muted: #6e6e6e;
+        --green: #4caf72;
+        --green-dark: #2f9a5a;
+        --green-soft: #dff5e7;
+        --shadow: rgba(0, 0, 0, 0.05);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--bg);
+        font-family: 'Inter', sans-serif;
+        color: var(--text);
+      }
+
+      body {
+        display: flex;
+        justify-content: center;
+        padding: 24px 20px 48px;
+      }
+
+      .page-shell {
+        width: min(100%, 1100px);
+      }
+
+      .campaign-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(300px, 390px);
+        gap: 22px;
+        align-items: start;
+      }
+
+      .story-panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .hero-photo {
+        position: relative;
+        height: 520px;
+        overflow: hidden;
+        background: #ddd;
+      }
+
+      .hero-photo img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+        object-position: 50% 30%;
+        filter: saturate(0.95) contrast(1.04);
+      }
+
+      .hero-overlay {
+        position: absolute;
+        left: 50%;
+        bottom: 28px;
+        transform: translateX(-50%);
+        width: min(86%, 420px);
+        background: rgba(0, 0, 0, 0.18);
+        padding: 14px 18px;
+        border-radius: 18px;
+        backdrop-filter: blur(2px);
+      }
+
+      .hero-overlay p {
+        margin: 0;
+        font-size: clamp(1.2rem, 2vw, 2rem);
+        line-height: 1.18;
+        font-weight: 700;
+        color: #fefefe;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+      }
+
+      .story-content {
+        padding: 18px 20px 24px;
+      }
+
+      .campaign-label {
+        display: inline-block;
+        margin: 0 0 14px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .campaign-title {
+        margin: 0;
+        font-size: clamp(2rem, 2.8vw, 3.1rem);
+        line-height: 1.06;
+        letter-spacing: -0.06em;
+        font-weight: 800;
+      }
+
+      .campaign-subtitle {
+        margin-top: 12px;
+        font-size: 14px;
+        color: var(--muted);
+        font-weight: 500;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 12px;
+        border-bottom: 1px solid var(--line);
+        margin-top: 18px;
+        padding-bottom: 0;
+      }
+
+      .tab {
+        border: none;
+        background: transparent;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--muted);
+        padding: 12px 8px 11px;
+        position: relative;
+        cursor: pointer;
+      }
+
+      .tab.active {
+        color: var(--text);
+        font-weight: 700;
+      }
+
+      .tab.active::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -1px;
+        height: 2px;
+        background: var(--text);
+      }
+
+      .about-card {
+        margin-top: 14px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 22px 20px 12px;
+      }
+
+      .about-card h2 {
+        margin: 0 0 18px;
+        font-size: 18px;
+        font-weight: 800;
+      }
+
+      .about-card p {
+        margin: 0 0 18px;
+        font-size: 15px;
+        line-height: 1.8;
+        color: #2f2f2f;
+      }
+
+      .donation-panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 16px 18px 18px;
+        position: sticky;
+        top: 18px;
+      }
+
+      .fav-button {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 8px;
+      }
+
+      .fav-button button {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 1px solid var(--line);
+        background: #f7f7f7;
+        color: #4c4c4c;
+        font-size: 18px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .fav-button button.liked {
+        background: #fff3f5;
+        border-color: #ffd0d8;
+        color: #ff5076;
+      }
+
+      .amount-box {
+        padding: 0 0 4px;
+      }
+
+      .amount-title {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 700;
+        color: #2a2a2a;
+      }
+
+      .amount-value {
+        margin-top: 6px;
+        font-size: clamp(2rem, 2vw, 3rem);
+        line-height: 1.1;
+        font-weight: 800;
+        letter-spacing: -0.05em;
+      }
+
+      .amount-meta {
+        margin-top: 2px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .amount-meta strong {
+        color: var(--green-dark);
+      }
+
+      .stats {
+        margin-top: 18px;
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+
+      .stat-row strong {
+        color: var(--text);
+        font-weight: 700;
+      }
+
+      .donation-actions {
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .btn {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 16px;
+        font-weight: 700;
+        padding: 14px 18px;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+      }
+
+      .btn-primary {
+        background: var(--green);
+        border-color: var(--green);
+        color: #fff;
+        box-shadow: 0 6px 12px rgba(76, 175, 114, 0.15);
+      }
+
+      .btn-primary:hover {
+        background: var(--green-dark);
+      }
+
+      .btn-secondary {
+        background: #fff;
+        color: var(--text);
+      }
+
+      .donation-note {
+        margin-top: 14px;
+        font-size: 11px;
+        line-height: 1.5;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .donation-note strong {
+        font-weight: 600;
+      }
+
+      .payment-amount-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 10px 0 12px;
+      }
+
+      .amount-option {
+        border: 1px solid #d9d9d9;
+        background: #fff;
+        color: #333;
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1;
+        cursor: pointer;
+        min-width: 54px;
+        text-align: center;
+      }
+
+      .amount-option.active {
+        background: var(--green);
+        border-color: var(--green);
+        color: #fff;
+      }
+
+      @media (max-width: 900px) {
+        .campaign-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .donation-panel {
+          position: static;
+        }
+
+        .hero-photo {
+          height: 420px;
+        }
+      }
+
+      @media (max-width: 560px) {
+        body {
+          padding: 12px 10px 30px;
+        }
+
+        .hero-photo {
+          height: 360px;
+        }
+
+        .campaign-title {
+          font-size: 2.2rem;
+        }
+
+        .about-card p {
+          font-size: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-shell">
+      <main class="campaign-layout">
+        <section class="story-panel">
+          <div class="hero-photo">
+            <img src="./assets/foto-vaquinha-frame.jpg" alt="Campanha de apoio" />
+            <div class="hero-overlay">
+              <p>Toda mãe de UTI já implorou a Deus por mais um dia. Por mais uma hora. Por mais um suspiro.</p>
+            </div>
+          </div>
+
+          <div class="story-content">
+            <div class="campaign-label">Solidariedade / Outras causas</div>
+
+            <h1 class="campaign-title">MINHA FILHA ESTÁ LUTANDO PARA RESPIRAR E EU ESTOU DESESPERADA</h1>
+            <div class="campaign-subtitle">Campanha em atualização</div>
+
+            <div class="tabs" aria-label="Abas da campanha">
+              <button class="tab active" type="button">Sobre</button>
+              <button class="tab" type="button">Apoiadores</button>
+            </div>
+
+            <div class="about-card">
+              <h2>Sobre esta vaquinha</h2>
+
+              <p>Olá, sou mãe da Dany e estou criando esta campanha para pedir apoio durante um período muito importante para nossa família.</p>
+
+              <p>A Dany está passando por um período de cuidados e acompanhamento, e nossa família está enfrentando alguns desafios relacionados a essa fase.</p>
+
+              <p>Como mãe, quero fazer tudo o que estiver ao meu alcance para proporcionar a ela o máximo de suporte necessário. Por isso, decidi pedir a ajuda de pessoas que possam contribuir com o compartilhamento desta campanha.</p>
+
+              <p>Qualquer contribuição será muito bem-vinda. Não existe valor pequeno quando você passa por uma fase difícil.</p>
+
+              <p>Caso você não possa contribuir neste momento, compartilhar esta campanha também será uma grande ajuda.</p>
+
+              <p>Agradeço de coração a cada pessoa que dedicar alguns minutos para conhecer nossa história e nos apoiar.</p>
+
+              <p>Muito obrigada por todo carinho, apoio e solidariedade com a Dany.</p>
+            </div>
+          </div>
+        </section>
+
+        <aside class="donation-panel">
+          <div class="fav-button">
+            <button id="favoriteButton" type="button" aria-label="Adicionar aos favoritos">❤</button>
+          </div>
+
+          <div class="amount-box">
+            <p class="amount-title">Arrecadado</p>
+            <div class="amount-value">R$ 5.548,00</div>
+            <div class="amount-meta">de <strong>R$ 20.000,00</strong></div>
+
+            <div class="stats">
+              <div class="stat-row">
+                <span>Corações Recebidos</span>
+                <strong>11929</strong>
+              </div>
+              <div class="stat-row">
+                <span>Apoiadores</span>
+                <strong>1254</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="donation-actions">
+            <button class="btn btn-primary" type="button">Quero Ajudar</button>
+            <button class="btn btn-secondary" type="button">Compartilhar</button>
+          </div>
+
+          <div class="donation-note">
+            As doações são feitas pelo <strong>gateway da família</strong>, em uma nova aba.
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <div id="firebot-payment-shell" style="display:none; position:fixed; right:22px; bottom:22px; width:min(360px, calc(100vw - 28px)); background:#fff; border:1px solid #e5e5e5; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.08); z-index:9999; padding:14px 14px 12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <strong style="font-size:14px;">Pagamento Pix</strong>
+        <button id="close-payment-shell" type="button" aria-label="Fechar pagamento" style="border:none; background:transparent; font-size:22px; cursor:pointer; color:#444; line-height:1;">×</button>
+      </div>
+
+      <div id="payment-amount-options" class="payment-amount-options" aria-label="Valores disponíveis para pagamento">
+        <button type="button" class="amount-option" data-value="5">R$ 5</button>
+        <button type="button" class="amount-option" data-value="10">R$ 10</button>
+        <button type="button" class="amount-option" data-value="15">R$ 15</button>
+        <button type="button" class="amount-option" data-value="20">R$ 20</button>
+        <button type="button" class="amount-option" data-value="25">R$ 25</button>
+        <button type="button" class="amount-option" data-value="30">R$ 30</button>
+        <button type="button" class="amount-option" data-value="35">R$ 35</button>
+        <button type="button" class="amount-option" data-value="40">R$ 40</button>
+        <button type="button" class="amount-option" data-value="45">R$ 45</button>
+        <button type="button" class="amount-option active" data-value="50">R$ 50</button>
+        <button type="button" class="amount-option" data-value="55">R$ 55</button>
+        <button type="button" class="amount-option" data-value="60">R$ 60</button>
+        <button type="button" class="amount-option" data-value="80">R$ 80</button>
+        <button type="button" class="amount-option" data-value="100">R$ 100</button>
+      </div>
+
+      <div id="payment-status-label" style="font-size:12px; color:#666; margin-bottom:8px;">Aguardando confirmação do pagamento.</div>
+
+      <div style="font-size:12px; color:#666; margin-bottom:6px;">Pix Copia e Cola</div>
+      <div style="display:flex; gap:8px; align-items:stretch;">
+        <input id="pix-copy-paste-input" readonly type="text" style="flex:1; padding:10px 12px; border:1px solid #d9d9d9; border-radius:8px; font-size:12px; background:#fff; color:#222;" />
+        <button id="copy-pix-button" type="button" style="padding:10px 12px; border:1px solid #4caf72; background:#4caf72; color:#fff; border-radius:8px; font-weight:700; cursor:pointer;">Copiar</button>
+      </div>
+
+      <div id="transaction-id-label" style="margin-top:10px; font-size:11px; color:#666; word-break:break-all;">
+        Transação: aguardando
+      </div>
+    </div>
+
+    <script>
+      const favoriteButton = document.getElementById('favoriteButton');
+      favoriteButton.addEventListener('click', () => {
+        favoriteButton.classList.toggle('liked');
+      });
+
+      const tabs = document.querySelectorAll('.tab');
+      tabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          tabs.forEach((t) => t.classList.remove('active'));
+          tab.classList.add('active');
+        });
+      });
+
+      const firebotPaymentShell = document.getElementById('firebot-payment-shell');
+      const paymentStatusLabel = document.getElementById('payment-status-label');
+      const pixCopyPasteInput = document.getElementById('pix-copy-paste-input');
+      const copyPixButton = document.getElementById('copy-pix-button');
+      const transactionIdLabel = document.getElementById('transaction-id-label');
+      const closePaymentShell = document.getElementById('close-payment-shell');
+      let paymentPollingTimer = null;
+      let paymentInFlight = false;
+      let selectedAmount = 50;
+
+      const setPaymentStatus = (text) => {
+        paymentStatusLabel.textContent = text;
+      };
+
+      document.querySelectorAll('.amount-option').forEach((button) => {
+        button.addEventListener('click', () => {
+          document.querySelectorAll('.amount-option').forEach((item) => item.classList.remove('active'));
+          button.classList.add('active');
+          selectedAmount = Number(button.dataset.value || 50);
+        });
+      });
+
+      const showPaymentShell = () => {
+        firebotPaymentShell.style.display = 'block';
+      };
+
+      const closePaymentShellFn = () => {
+        firebotPaymentShell.style.display = 'none';
+      };
+
+      closePaymentShell.addEventListener('click', closePaymentShellFn);
+
+      copyPixButton.addEventListener('click', async () => {
+        const pixCode = pixCopyPasteInput.value.trim();
+        if (!pixCode) {
+          setPaymentStatus('Pix Copia e Cola indisponível.');
+          return;
+        }
+
+        try {
+          await navigator.clipboard.writeText(pixCode);
+          setPaymentStatus('Pix copiado para a área de transferência.');
+        } catch (error) {
+          pixCopyPasteInput.select();
+          document.execCommand('copy');
+          setPaymentStatus('Pix copiado para a área de transferência.');
+        }
+      });
+
+      async function startPaymentStatusPolling(transactionId) {
+        if (!transactionId) {
+          return;
+        }
+
+        if (paymentPollingTimer) {
+          clearInterval(paymentPollingTimer);
+        }
+
+        paymentPollingTimer = setInterval(async () => {
+          try {
+            const response = await fetch('/api/pix/status', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ transactionId })
+            });
+
+            const payload = await response.json();
+            const status = (payload.status || 'PENDING').toUpperCase();
+
+            if (status === 'PAID' || status === 'APPROVED' || status === 'CONFIRMED') {
+              setPaymentStatus('Pagamento confirmado pela FireBot.');
+              clearInterval(paymentPollingTimer);
+            } else if (status === 'PENDING' || status === 'PROCESSING') {
+              setPaymentStatus('Pagamento aguardando confirmação.');
+            } else if (status === 'EXPIRED' || status === 'CANCELLED' || status === 'REJECTED') {
+              setPaymentStatus('Pagamento expirado, cancelado ou recusado.');
+              clearInterval(paymentPollingTimer);
+            }
+          } catch (error) {
+            setPaymentStatus('Não foi possível consultar o status do pagamento.');
+          }
+        }, 5000);
+      }
+
+      async function createFirebotPixCharge() {
+        if (paymentInFlight) {
+          return;
+        }
+
+        paymentInFlight = true;
+
+        const donationAmount = Number(selectedAmount || 50);
+        const customerName = 'Cliente';
+        const customerEmail = 'cliente@exemplo.com';
+        const customerCpf = '00000000000';
+        const customerPhone = '31999999999';
+        const customerAddress = 'Rua Exemplo, 123 - Centro, Belo Horizonte/MG';
+
+        setPaymentStatus('Gerando cobrança Pix...');
+        showPaymentShell();
+
+        try {
+          const response = await fetch('/api/pix/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              amount: donationAmount,
+              description: 'Apoio à campanha da família Dany',
+              storeUrl: window.location.href,
+              customer: {
+                name: customerName,
+                email: customerEmail,
+                cpf: customerCpf,
+                phone: customerPhone,
+                address: customerAddress
+              }
+            })
+          });
+
+          const payload = await response.json();
+          if (!response.ok) {
+            throw new Error(payload.message || 'Erro ao criar cobrança Pix.');
+          }
+
+          const pixCode = payload.pixCopiaECola || '';
+          const transactionId = payload.transactionId || 'sem-transacao';
+
+          pixCopyPasteInput.value = pixCode;
+          transactionIdLabel.textContent = 'Transação: ' + transactionId;
+
+          if ((payload.status || '').toUpperCase() === 'PAID' || (payload.status || '').toUpperCase() === 'APPROVED' || (payload.status || '').toUpperCase() === 'CONFIRMED') {
+            setPaymentStatus('Pagamento confirmado pela FireBot.');
+          } else if ((payload.status || '').toUpperCase() === 'PENDING' || (payload.status || '').toUpperCase() === 'PROCESSING') {
+            setPaymentStatus('Pagamento aguardando confirmação.');
+            startPaymentStatusPolling(transactionId);
+          } else if ((payload.status || '').toUpperCase() === 'EXPIRED' || (payload.status || '').toUpperCase() === 'CANCELLED' || (payload.status || '').toUpperCase() === 'REJECTED') {
+            setPaymentStatus('Pagamento expirado, cancelado ou recusado.');
+          } else {
+            setPaymentStatus('Cobrança criada com sucesso.');
+            startPaymentStatusPolling(transactionId);
+          }
+        } catch (error) {
+          setPaymentStatus(error.message || 'Não foi possível criar a cobrança Pix.');
+        } finally {
+          paymentInFlight = false;
+        }
+      }
+
+      document.querySelector('.btn-primary').addEventListener('click', createFirebotPixCharge);
+    </script>
+  </body>
+</html>
