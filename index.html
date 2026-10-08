@@ -298,43 +298,160 @@
         color: var(--text);
       }
 
-      .donation-note {
-        margin-top: 14px;
-        font-size: 11px;
-        line-height: 1.5;
-        color: var(--muted);
-        text-align: center;
-      }
-
-      .donation-note strong {
-        font-weight: 600;
-      }
-
-      .payment-amount-options {
+      .contribution-values {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
-        margin: 10px 0 12px;
+        margin: 2px 0 0;
+        padding: 0;
+        border: 0;
       }
 
-      .amount-option {
+      .contribution-values legend {
+        width: 100%;
+        margin-bottom: 6px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .contribution-value {
+        min-width: 54px;
+        padding: 8px 10px;
         border: 1px solid #d9d9d9;
+        border-radius: 8px;
         background: #fff;
         color: #333;
-        border-radius: 8px;
-        padding: 8px 10px;
         font-size: 12px;
         font-weight: 700;
-        line-height: 1;
         cursor: pointer;
-        min-width: 54px;
-        text-align: center;
       }
 
-      .amount-option.active {
-        background: var(--green);
+      .contribution-value[aria-pressed="true"] {
         border-color: var(--green);
+        background: var(--green);
         color: #fff;
+      }
+
+      .contribution-status {
+        min-height: 18px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .checkout-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        background: rgba(0, 0, 0, 0.48);
+      }
+
+      .checkout-modal[hidden],
+      .checkout-result[hidden],
+      .checkout-qr[hidden] {
+        display: none;
+      }
+
+      .checkout-dialog {
+        width: min(100%, 460px);
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 20px;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 10px 36px rgba(0, 0, 0, 0.2);
+      }
+
+      .checkout-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+
+      .checkout-header h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .checkout-close {
+        border: 0;
+        background: transparent;
+        color: #444;
+        font-size: 24px;
+        cursor: pointer;
+      }
+
+      .checkout-form {
+        display: grid;
+        gap: 10px;
+      }
+
+      .checkout-form label {
+        display: grid;
+        gap: 5px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .checkout-form input {
+        width: 100%;
+        padding: 10px 11px;
+        border: 1px solid #d9d9d9;
+        border-radius: 7px;
+        font: inherit;
+      }
+
+      .checkout-form button {
+        width: 100%;
+        margin-top: 4px;
+      }
+
+      .checkout-status {
+        margin: 12px 0 0;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .checkout-result {
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px solid var(--line);
+        font-size: 13px;
+      }
+
+      .checkout-result p {
+        margin: 0 0 8px;
+      }
+
+      .checkout-copy-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .checkout-copy-row input {
+        min-width: 0;
+        flex: 1;
+        padding: 9px;
+        border: 1px solid #d9d9d9;
+        border-radius: 7px;
+      }
+
+      .checkout-copy-row button {
+        padding: 9px 12px;
+        font-size: 13px;
+      }
+
+      .checkout-qr {
+        display: block;
+        width: min(100%, 240px);
+        margin: 14px auto 0;
       }
 
       @media (max-width: 900px) {
@@ -435,51 +552,67 @@
           </div>
 
           <div class="donation-actions">
-            <button class="btn btn-primary" type="button">Quero Ajudar</button>
+            <button id="donate-button" class="btn btn-primary" type="button">Quero Doar</button>
+            <fieldset class="contribution-values" aria-label="Valores para contribuir">
+              <legend>Escolha um valor</legend>
+              <button class="contribution-value" type="button" data-value="5" aria-pressed="false">R$ 5</button>
+              <button class="contribution-value" type="button" data-value="10" aria-pressed="false">R$ 10</button>
+              <button class="contribution-value" type="button" data-value="15" aria-pressed="false">R$ 15</button>
+              <button class="contribution-value" type="button" data-value="20" aria-pressed="false">R$ 20</button>
+              <button class="contribution-value" type="button" data-value="25" aria-pressed="false">R$ 25</button>
+              <button class="contribution-value" type="button" data-value="30" aria-pressed="false">R$ 30</button>
+              <button class="contribution-value" type="button" data-value="35" aria-pressed="false">R$ 35</button>
+              <button class="contribution-value" type="button" data-value="40" aria-pressed="false">R$ 40</button>
+              <button class="contribution-value" type="button" data-value="45" aria-pressed="false">R$ 45</button>
+              <button class="contribution-value" type="button" data-value="50" aria-pressed="true">R$ 50</button>
+              <button class="contribution-value" type="button" data-value="55" aria-pressed="false">R$ 55</button>
+              <button class="contribution-value" type="button" data-value="60" aria-pressed="false">R$ 60</button>
+              <button class="contribution-value" type="button" data-value="100" aria-pressed="false">R$ 100</button>
+            </fieldset>
+            <p id="contribution-status" class="contribution-status" aria-live="polite">Valor selecionado: R$ 50,00.</p>
             <button class="btn btn-secondary" type="button">Compartilhar</button>
-          </div>
-
-          <div class="donation-note">
-            As doações são feitas pelo <strong>gateway da família</strong>, em uma nova aba.
           </div>
         </aside>
       </main>
     </div>
 
-    <div id="firebot-payment-shell" style="display:none; position:fixed; right:22px; bottom:22px; width:min(360px, calc(100vw - 28px)); background:#fff; border:1px solid #e5e5e5; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.08); z-index:9999; padding:14px 14px 12px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <strong style="font-size:14px;">Pagamento Pix</strong>
-        <button id="close-payment-shell" type="button" aria-label="Fechar pagamento" style="border:none; background:transparent; font-size:22px; cursor:pointer; color:#444; line-height:1;">×</button>
-      </div>
-
-      <div id="payment-amount-options" class="payment-amount-options" aria-label="Valores disponíveis para pagamento">
-        <button type="button" class="amount-option" data-value="5">R$ 5</button>
-        <button type="button" class="amount-option" data-value="10">R$ 10</button>
-        <button type="button" class="amount-option" data-value="15">R$ 15</button>
-        <button type="button" class="amount-option" data-value="20">R$ 20</button>
-        <button type="button" class="amount-option" data-value="25">R$ 25</button>
-        <button type="button" class="amount-option" data-value="30">R$ 30</button>
-        <button type="button" class="amount-option" data-value="35">R$ 35</button>
-        <button type="button" class="amount-option" data-value="40">R$ 40</button>
-        <button type="button" class="amount-option" data-value="45">R$ 45</button>
-        <button type="button" class="amount-option active" data-value="50">R$ 50</button>
-        <button type="button" class="amount-option" data-value="55">R$ 55</button>
-        <button type="button" class="amount-option" data-value="60">R$ 60</button>
-        <button type="button" class="amount-option" data-value="80">R$ 80</button>
-        <button type="button" class="amount-option" data-value="100">R$ 100</button>
-      </div>
-
-      <div id="payment-status-label" style="font-size:12px; color:#666; margin-bottom:8px;">Aguardando confirmação do pagamento.</div>
-
-      <div style="font-size:12px; color:#666; margin-bottom:6px;">Pix Copia e Cola</div>
-      <div style="display:flex; gap:8px; align-items:stretch;">
-        <input id="pix-copy-paste-input" readonly type="text" style="flex:1; padding:10px 12px; border:1px solid #d9d9d9; border-radius:8px; font-size:12px; background:#fff; color:#222;" />
-        <button id="copy-pix-button" type="button" style="padding:10px 12px; border:1px solid #4caf72; background:#4caf72; color:#fff; border-radius:8px; font-weight:700; cursor:pointer;">Copiar</button>
-      </div>
-
-      <div id="transaction-id-label" style="margin-top:10px; font-size:11px; color:#666; word-break:break-all;">
-        Transação: aguardando
-      </div>
+    <div id="checkout-modal" class="checkout-modal" hidden>
+      <section class="checkout-dialog" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
+        <div class="checkout-header">
+          <h2 id="checkout-title">Finalizar contribuição</h2>
+          <button id="close-checkout" class="checkout-close" type="button" aria-label="Fechar">×</button>
+        </div>
+        <form id="checkout-form" class="checkout-form">
+          <label for="checkout-name">Nome completo
+            <input id="checkout-name" name="name" autocomplete="name" required />
+          </label>
+          <label for="checkout-email">E-mail
+            <input id="checkout-email" name="email" type="email" autocomplete="email" required />
+          </label>
+          <label for="checkout-cpf">CPF
+            <input id="checkout-cpf" name="cpf" inputmode="numeric" autocomplete="off" maxlength="14" required />
+          </label>
+          <label for="checkout-phone">Telefone com DDD
+            <input id="checkout-phone" name="phone" type="tel" autocomplete="tel" required />
+          </label>
+          <label for="checkout-address">Endereço completo
+            <input id="checkout-address" name="address" autocomplete="street-address" required />
+          </label>
+          <button id="checkout-submit" class="btn btn-primary" type="submit">Gerar cobrança</button>
+        </form>
+        <p id="checkout-status" class="checkout-status" role="status" aria-live="polite"></p>
+        <div id="checkout-result" class="checkout-result" hidden>
+          <p>Valor: <strong id="checkout-amount"></strong></p>
+          <p>Transação: <strong id="checkout-transaction"></strong></p>
+          <p>Status: <strong id="checkout-transaction-status"></strong></p>
+          <label for="checkout-pix-code">Código para copiar e colar</label>
+          <div class="checkout-copy-row">
+            <input id="checkout-pix-code" readonly />
+            <button id="copy-checkout-pix" class="btn btn-primary" type="button">Copiar</button>
+          </div>
+          <img id="checkout-qr" class="checkout-qr" alt="QR Code para pagamento" hidden />
+        </div>
+      </section>
     </div>
 
     <script>
@@ -496,155 +629,160 @@
         });
       });
 
-      const firebotPaymentShell = document.getElementById('firebot-payment-shell');
-      const paymentStatusLabel = document.getElementById('payment-status-label');
-      const pixCopyPasteInput = document.getElementById('pix-copy-paste-input');
-      const copyPixButton = document.getElementById('copy-pix-button');
-      const transactionIdLabel = document.getElementById('transaction-id-label');
-      const closePaymentShell = document.getElementById('close-payment-shell');
-      let paymentPollingTimer = null;
-      let paymentInFlight = false;
-      let selectedAmount = 50;
-
-      const setPaymentStatus = (text) => {
-        paymentStatusLabel.textContent = text;
-      };
-
-      document.querySelectorAll('.amount-option').forEach((button) => {
+      let selectedContribution = 50;
+      const contributionStatus = document.getElementById('contribution-status');
+      document.querySelectorAll('.contribution-value').forEach((button) => {
         button.addEventListener('click', () => {
-          document.querySelectorAll('.amount-option').forEach((item) => item.classList.remove('active'));
-          button.classList.add('active');
-          selectedAmount = Number(button.dataset.value || 50);
+          selectedContribution = Number(button.dataset.value);
+          document.querySelectorAll('.contribution-value').forEach((option) => {
+            option.setAttribute('aria-pressed', String(option === button));
+          });
+          contributionStatus.textContent = 'Valor selecionado: R$ ' + selectedContribution + ',00.';
         });
       });
 
-      const showPaymentShell = () => {
-        firebotPaymentShell.style.display = 'block';
-      };
+      document.getElementById('donate-button').addEventListener('click', () => {
+        document.getElementById('checkout-modal').hidden = false;
+        document.getElementById('checkout-name').focus();
+        document.getElementById('checkout-status').textContent =
+          'Valor da contribuição: R$ ' + selectedContribution + ',00.';
+      });
 
-      const closePaymentShellFn = () => {
-        firebotPaymentShell.style.display = 'none';
-      };
+      const checkoutModal = document.getElementById('checkout-modal');
+      const checkoutForm = document.getElementById('checkout-form');
+      const checkoutStatus = document.getElementById('checkout-status');
+      const checkoutSubmit = document.getElementById('checkout-submit');
+      const checkoutResult = document.getElementById('checkout-result');
+      const checkoutPixCode = document.getElementById('checkout-pix-code');
+      const checkoutQr = document.getElementById('checkout-qr');
+      let checkoutInFlight = false;
 
-      closePaymentShell.addEventListener('click', closePaymentShellFn);
-
-      copyPixButton.addEventListener('click', async () => {
-        const pixCode = pixCopyPasteInput.value.trim();
-        if (!pixCode) {
-          setPaymentStatus('Pix Copia e Cola indisponível.');
-          return;
+      const closeCheckout = () => {
+        if (!checkoutInFlight) {
+          checkoutModal.hidden = true;
         }
+      };
 
-        try {
-          await navigator.clipboard.writeText(pixCode);
-          setPaymentStatus('Pix copiado para a área de transferência.');
-        } catch (error) {
-          pixCopyPasteInput.select();
-          document.execCommand('copy');
-          setPaymentStatus('Pix copiado para a área de transferência.');
+      document.getElementById('close-checkout').addEventListener('click', closeCheckout);
+      checkoutModal.addEventListener('click', (event) => {
+        if (event.target === checkoutModal) {
+          closeCheckout();
+        }
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !checkoutModal.hidden) {
+          closeCheckout();
         }
       });
 
-      async function startPaymentStatusPolling(transactionId) {
-        if (!transactionId) {
+      checkoutForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (checkoutInFlight) {
           return;
         }
 
-        if (paymentPollingTimer) {
-          clearInterval(paymentPollingTimer);
-        }
+        checkoutInFlight = true;
+        checkoutSubmit.disabled = true;
+        checkoutStatus.textContent = 'Criando cobrança...';
+        checkoutResult.hidden = true;
+        checkoutQr.hidden = true;
+        checkoutPixCode.value = '';
 
-        paymentPollingTimer = setInterval(async () => {
-          try {
-            const response = await fetch('/api/pix/status', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ transactionId })
-            });
-
-            const payload = await response.json();
-            const status = (payload.status || 'PENDING').toUpperCase();
-
-            if (status === 'PAID' || status === 'APPROVED' || status === 'CONFIRMED') {
-              setPaymentStatus('Pagamento confirmado pela FireBot.');
-              clearInterval(paymentPollingTimer);
-            } else if (status === 'PENDING' || status === 'PROCESSING') {
-              setPaymentStatus('Pagamento aguardando confirmação.');
-            } else if (status === 'EXPIRED' || status === 'CANCELLED' || status === 'REJECTED') {
-              setPaymentStatus('Pagamento expirado, cancelado ou recusado.');
-              clearInterval(paymentPollingTimer);
-            }
-          } catch (error) {
-            setPaymentStatus('Não foi possível consultar o status do pagamento.');
-          }
-        }, 5000);
-      }
-
-      async function createFirebotPixCharge() {
-        if (paymentInFlight) {
-          return;
-        }
-
-        paymentInFlight = true;
-
-        const donationAmount = Number(selectedAmount || 50);
-        const customerName = 'Cliente';
-        const customerEmail = 'cliente@exemplo.com';
-        const customerCpf = '00000000000';
-        const customerPhone = '31999999999';
-        const customerAddress = 'Rua Exemplo, 123 - Centro, Belo Horizonte/MG';
-
-        setPaymentStatus('Gerando cobrança Pix...');
-        showPaymentShell();
+        const formData = new FormData(checkoutForm);
+        const customer = {
+          name: String(formData.get('name') || '').trim(),
+          email: String(formData.get('email') || '').trim(),
+          cpf: String(formData.get('cpf') || '').replace(/\D/g, ''),
+          phone: String(formData.get('phone') || '').trim(),
+          address: String(formData.get('address') || '').trim()
+        };
 
         try {
           const response = await fetch('/api/pix/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              amount: donationAmount,
+              amount: selectedContribution,
+              productType: 'DIGITAL',
               description: 'Apoio à campanha da família Dany',
               storeUrl: window.location.href,
-              customer: {
-                name: customerName,
-                email: customerEmail,
-                cpf: customerCpf,
-                phone: customerPhone,
-                address: customerAddress
-              }
+              customer
             })
           });
+          const responseStatus = response.status;
+          const responseOk = response.ok;
+          const contentType = response.headers.get('content-type') || '';
+          const responseText = await response.text();
+          const mediaType = contentType.split(';', 1)[0].trim().toLowerCase();
+          const isJsonResponse = mediaType === 'application/json' || mediaType.endsWith('+json');
+          let payload = null;
 
-          const payload = await response.json();
-          if (!response.ok) {
-            throw new Error(payload.message || 'Erro ao criar cobrança Pix.');
+          if (isJsonResponse && responseText) {
+            try {
+              payload = JSON.parse(responseText);
+            } catch (error) {
+              payload = null;
+            }
           }
 
-          const pixCode = payload.pixCopiaECola || '';
-          const transactionId = payload.transactionId || 'sem-transacao';
-
-          pixCopyPasteInput.value = pixCode;
-          transactionIdLabel.textContent = 'Transação: ' + transactionId;
-
-          if ((payload.status || '').toUpperCase() === 'PAID' || (payload.status || '').toUpperCase() === 'APPROVED' || (payload.status || '').toUpperCase() === 'CONFIRMED') {
-            setPaymentStatus('Pagamento confirmado pela FireBot.');
-          } else if ((payload.status || '').toUpperCase() === 'PENDING' || (payload.status || '').toUpperCase() === 'PROCESSING') {
-            setPaymentStatus('Pagamento aguardando confirmação.');
-            startPaymentStatusPolling(transactionId);
-          } else if ((payload.status || '').toUpperCase() === 'EXPIRED' || (payload.status || '').toUpperCase() === 'CANCELLED' || (payload.status || '').toUpperCase() === 'REJECTED') {
-            setPaymentStatus('Pagamento expirado, cancelado ou recusado.');
-          } else {
-            setPaymentStatus('Cobrança criada com sucesso.');
-            startPaymentStatusPolling(transactionId);
+          if (!responseOk) {
+            const gatewayStatus = payload?.gatewayStatus;
+            const status = gatewayStatus || responseStatus;
+            const details = payload?.gatewayMessage || payload?.message || responseText;
+            const safeDetails = String(details || 'A API não retornou uma mensagem de erro.')
+              .slice(0, 1500);
+            const statusLabel = gatewayStatus ? 'FireBot HTTP ' : 'HTTP ';
+            throw new Error(statusLabel + status + ': ' + safeDetails);
           }
+          if (!isJsonResponse) {
+            throw new Error('O serviço de cobrança retornou uma resposta inválida.');
+          }
+
+          if (!payload || typeof payload !== 'object') {
+            throw new Error('O serviço de cobrança retornou um JSON inválido.');
+          }
+          if (!payload.pixCopiaECola) {
+            throw new Error('Não foi possível obter os dados para concluir o pagamento.');
+          }
+
+          checkoutPixCode.value = payload.pixCopiaECola;
+          document.getElementById('checkout-amount').textContent =
+            'R$ ' + selectedContribution.toFixed(2).replace('.', ',');
+          document.getElementById('checkout-transaction').textContent =
+            payload.transactionId || 'não informado';
+          document.getElementById('checkout-transaction-status').textContent =
+            payload.status || 'Pendente';
+
+          if (payload.qrCodeUrl) {
+            checkoutQr.src = payload.qrCodeUrl;
+            checkoutQr.hidden = false;
+          }
+          checkoutResult.hidden = false;
+          checkoutStatus.textContent = 'Cobrança criada. Conclua o pagamento pelo QR Code ou código.';
         } catch (error) {
-          setPaymentStatus(error.message || 'Não foi possível criar a cobrança Pix.');
+          checkoutStatus.textContent = error.message || 'Não foi possível conectar ao serviço de cobrança.';
         } finally {
-          paymentInFlight = false;
+          checkoutInFlight = false;
+          checkoutSubmit.disabled = false;
         }
-      }
+      });
 
-      document.querySelector('.btn-primary').addEventListener('click', createFirebotPixCharge);
+      document.getElementById('copy-checkout-pix').addEventListener('click', async () => {
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(checkoutPixCode.value);
+          } else {
+            checkoutPixCode.focus();
+            checkoutPixCode.select();
+            if (!document.execCommand('copy')) {
+              throw new Error('Selecione o código e copie manualmente.');
+            }
+          }
+          checkoutStatus.textContent = 'Código copiado.';
+        } catch (error) {
+          checkoutStatus.textContent = error.message || 'Não foi possível copiar o código.';
+        }
+      });
     </script>
   </body>
 </html>
