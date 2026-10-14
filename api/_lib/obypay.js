@@ -100,6 +100,7 @@ async function request(path, options = {}) {
 
   if (!response.ok) {
     const code = payload?.code || payload?.error?.code || payload?.error || "BAD_REQUEST";
+    console.error("Resposta de erro da ObyPay:", response.status, payload);
     const message = payload?.message || payload?.error?.message || {
       400: "Confira os dados informados e tente novamente.",
       401: "A chave de API do gateway é inválida.",
