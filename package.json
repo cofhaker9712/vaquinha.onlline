@@ -1,0 +1,16 @@
+{
+  "name": "vaquinha-obypay",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
+    "qrcode": "^1.5.4"
+  }
+}

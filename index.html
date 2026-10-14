@@ -418,6 +418,20 @@
         line-height: 1.5;
       }
 
+      .checkout-help {
+        margin: 8px 0 0;
+        padding: 10px 12px;
+        border-radius: 7px;
+        background: #fff7e6;
+        color: #654d1c;
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .checkout-help[hidden] {
+        display: none;
+      }
+
       .checkout-result {
         margin-top: 14px;
         padding-top: 12px;
@@ -555,6 +569,7 @@
             <button id="donate-button" class="btn btn-primary" type="button">Quero Doar</button>
             <fieldset class="contribution-values" aria-label="Valores para contribuir">
               <legend>Escolha um valor</legend>
+              <button class="contribution-value" type="button" data-value="2" aria-pressed="false">R$ 2</button>
               <button class="contribution-value" type="button" data-value="5" aria-pressed="false">R$ 5</button>
               <button class="contribution-value" type="button" data-value="10" aria-pressed="false">R$ 10</button>
               <button class="contribution-value" type="button" data-value="15" aria-pressed="false">R$ 15</button>
@@ -570,7 +585,7 @@
               <button class="contribution-value" type="button" data-value="100" aria-pressed="false">R$ 100</button>
             </fieldset>
             <p id="contribution-status" class="contribution-status" aria-live="polite">Valor selecionado: R$ 50,00.</p>
-            <button class="btn btn-secondary" type="button">Compartilhar</button>
+            <button id="share-button" class="btn btn-secondary" type="button">Compartilhar</button>
           </div>
         </aside>
       </main>
@@ -595,12 +610,10 @@
           <label for="checkout-phone">Telefone com DDD
             <input id="checkout-phone" name="phone" type="tel" autocomplete="tel" required />
           </label>
-          <label for="checkout-address">Endereço completo
-            <input id="checkout-address" name="address" autocomplete="street-address" required />
-          </label>
           <button id="checkout-submit" class="btn btn-primary" type="submit">Gerar cobrança</button>
         </form>
         <p id="checkout-status" class="checkout-status" role="status" aria-live="polite"></p>
+        <p id="checkout-help" class="checkout-help" hidden></p>
         <div id="checkout-result" class="checkout-result" hidden>
           <p>Valor: <strong id="checkout-amount"></strong></p>
           <p>Transação: <strong id="checkout-transaction"></strong></p>
@@ -616,6 +629,56 @@
     </div>
 
     <script>
+      const trackingKeys = [
+        'utm_source', 'utm_campaign', 'utm_medium', 'utm_content',
+        'utm_term', 'src', 'sck'
+      ];
+      const trackingStorageKey = 'lp_tracking';
+
+      const readSavedTracking = () => {
+        try {
+          const stored = localStorage.getItem(trackingStorageKey);
+          if (stored) {
+            return JSON.parse(stored);
+          }
+        } catch (error) {
+          console.warn('Não foi possível ler o rastreamento salvo.', error);
+        }
+
+        const cookie = document.cookie.split('; ')
+          .find((part) => part.startsWith(trackingStorageKey + '='));
+        if (!cookie) {
+          return {};
+        }
+        try {
+          return JSON.parse(decodeURIComponent(cookie.slice(trackingStorageKey.length + 1)));
+        } catch (error) {
+          console.warn('O cookie de rastreamento salvo não pôde ser lido.', error);
+          return {};
+        }
+      };
+
+      const trackingParams = new URLSearchParams(window.location.search);
+      const hasIncomingTracking = trackingKeys.some((key) => trackingParams.has(key));
+      const previousTracking = hasIncomingTracking ? {} : readSavedTracking();
+      const campaignTracking = Object.fromEntries(trackingKeys.map((key) => {
+        const incoming = trackingParams.get(key);
+        const value = hasIncomingTracking ? incoming : previousTracking[key];
+        return [key, typeof value === 'string' && value.trim() ? value : null];
+      }));
+
+      if (hasIncomingTracking) {
+        const serializedTracking = JSON.stringify(campaignTracking);
+        try {
+          localStorage.setItem(trackingStorageKey, serializedTracking);
+        } catch (error) {
+          console.warn('Não foi possível salvar o rastreamento localmente.', error);
+        }
+        document.cookie = trackingStorageKey + '=' + encodeURIComponent(serializedTracking) +
+          '; Max-Age=2592000; Path=/; SameSite=Lax' +
+          (location.protocol === 'https:' ? '; Secure' : '');
+      }
+
       const favoriteButton = document.getElementById('favoriteButton');
       favoriteButton.addEventListener('click', () => {
         favoriteButton.classList.toggle('liked');
@@ -643,6 +706,7 @@
 
       document.getElementById('donate-button').addEventListener('click', () => {
         document.getElementById('checkout-modal').hidden = false;
+        checkoutHelp.hidden = true;
         document.getElementById('checkout-name').focus();
         document.getElementById('checkout-status').textContent =
           'Valor da contribuição: R$ ' + selectedContribution + ',00.';
@@ -651,15 +715,112 @@
       const checkoutModal = document.getElementById('checkout-modal');
       const checkoutForm = document.getElementById('checkout-form');
       const checkoutStatus = document.getElementById('checkout-status');
+      const checkoutHelp = document.getElementById('checkout-help');
       const checkoutSubmit = document.getElementById('checkout-submit');
       const checkoutResult = document.getElementById('checkout-result');
       const checkoutPixCode = document.getElementById('checkout-pix-code');
       const checkoutQr = document.getElementById('checkout-qr');
       let checkoutInFlight = false;
+      let pollingTimer;
+      let pollingInFlight = false;
+
+      const checkoutHelpForStatus = (status) => {
+        if (status === 405) {
+          return 'A rota da Vercel respondeu 405. No painel Vercel, confirme Root Directory = ./, confira em Deployments se api/charges.js foi publicado e faça Redeploy do último commit.';
+        }
+        if (status === 404) {
+          return 'A função de pagamento não foi encontrada. Confira se a pasta api/ está na raiz do projeto publicado e faça um novo deploy.';
+        }
+        if (status === 401) {
+          return 'A chave ObyPay foi recusada. Gere uma chave nova se necessário, salve como OBYPAY_API_KEY em Vercel → Settings → Environment Variables e faça Redeploy. Não envie a chave por mensagem.';
+        }
+        if (status === 403) {
+          return 'Confira no painel ObyPay se a conta está habilitada e a chave tem o escopo payments.create.';
+        }
+        if (status === 429) {
+          return 'A API limitou temporariamente as cobranças. Aguarde antes de tentar novamente e evite clicar várias vezes.';
+        }
+        if (status === 400) {
+          return 'Confira os dados do formulário e os detalhes da resposta. Se os dados estiverem corretos, consulte os logs da função api/charges na Vercel.';
+        }
+        if (status >= 500) {
+          return 'Abra Vercel → Deployments → último deploy → Functions/Logs e confira api/charges. Verifique também OBYPAY_API_KEY, DATABASE_URL e APP_URL nas variáveis de ambiente; depois de alterá-las, faça Redeploy.';
+        }
+        return 'Confira sua conexão. Se continuar, abra Vercel → Deployments → último deploy → Functions/Logs e procure api/charges. Ao pedir ajuda, compartilhe a mensagem e o HTTP, mas nunca a chave API, CPF ou outros dados pessoais.';
+      };
+
+      const setCheckoutError = (error, fallbackMessage) => {
+        checkoutStatus.textContent = error.message || fallbackMessage;
+        checkoutHelp.textContent = checkoutHelpForStatus(error.status);
+        checkoutHelp.hidden = false;
+      };
+
+      const responseError = (message, status) => {
+        const error = new Error(message);
+        error.status = status;
+        return error;
+      };
+
+      const readApiResponse = async (response, fallbackMessage) => {
+        let responseText;
+        try {
+          responseText = await response.text();
+        } catch (error) {
+          throw new Error('Não foi possível ler a resposta do serviço de pagamento.');
+        }
+
+        let payload;
+        if (responseText.trim()) {
+          try {
+            payload = JSON.parse(responseText);
+          } catch (error) {
+            if (response.status === 404) {
+              throw responseError('A rota de pagamento não está disponível neste deploy da Vercel. Publique as funções da integração ObyPay.', response.status);
+            }
+            if (response.status === 405) {
+              throw responseError('A Vercel não encaminhou POST /api/charges para a função de pagamento. Confira o diretório raiz do projeto e publique novamente as funções da integração ObyPay.', response.status);
+            }
+            if (!response.ok) {
+              throw responseError('O serviço de pagamento respondeu com erro (HTTP ' + response.status + '). Tente novamente mais tarde.', response.status);
+            }
+            throw new Error('O serviço de pagamento retornou uma resposta inválida (HTTP ' + response.status + ').');
+          }
+        } else {
+          if (response.status === 404) {
+            throw responseError('A rota de pagamento não está disponível neste deploy da Vercel. Publique as funções da integração ObyPay.', response.status);
+          }
+          if (response.status === 405) {
+            throw responseError('A Vercel não encaminhou POST /api/charges para a função de pagamento. Confira o diretório raiz do projeto e publique novamente as funções da integração ObyPay.', response.status);
+          }
+          if (!response.ok) {
+            throw responseError('O serviço de pagamento respondeu sem detalhes (HTTP ' + response.status + '). Tente novamente mais tarde.', response.status);
+          }
+          throw new Error('O serviço de pagamento retornou uma resposta vazia (HTTP ' + response.status + ').');
+        }
+
+        if (!response.ok) {
+          const retryAfter = response.headers.get('Retry-After');
+          const retryMessage = response.status === 429 && retryAfter && /^\d+$/.test(retryAfter)
+            ? ' Aguarde ' + retryAfter + ' segundos antes de tentar novamente.'
+            : '';
+          throw responseError(
+            (typeof payload?.error === 'string' && payload.error
+              ? payload.error
+              : fallbackMessage) + retryMessage,
+            response.status
+          );
+        }
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+          throw new Error('O serviço de pagamento retornou dados em formato inesperado.');
+        }
+
+        return payload;
+      };
 
       const closeCheckout = () => {
         if (!checkoutInFlight) {
           checkoutModal.hidden = true;
+          window.clearTimeout(pollingTimer);
         }
       };
 
@@ -675,6 +836,42 @@
         }
       });
 
+      const pollPaymentStatus = async (orderId) => {
+        if (checkoutModal.hidden || pollingInFlight) {
+          return;
+        }
+
+        pollingInFlight = true;
+        try {
+          const response = await fetch('/api/charges/' + encodeURIComponent(orderId), {
+            cache: 'no-store'
+          });
+          const payload = await readApiResponse(response, 'Não foi possível consultar o pagamento.');
+
+          document.getElementById('checkout-transaction-status').textContent = payload.status;
+          if (['PAID', 'FAILED', 'EXPIRED', 'MED'].includes(payload.status)) {
+            const messages = {
+              PAID: 'Pagamento confirmado. Muito obrigada por apoiar a Dany!',
+              FAILED: 'Esta tentativa de pagamento não foi concluída.',
+              EXPIRED: 'O prazo deste PIX terminou.',
+              MED: 'Esta transação foi encerrada pelo processador de pagamento.'
+            };
+            checkoutStatus.textContent = messages[payload.status];
+            checkoutHelp.hidden = true;
+            sessionStorage.removeItem('vaquinha-pending-order');
+            return;
+          }
+        } catch (error) {
+          setCheckoutError(error, 'Não foi possível consultar o pagamento. Vamos tentar novamente.');
+        } finally {
+          pollingInFlight = false;
+        }
+
+        if (!checkoutModal.hidden) {
+          pollingTimer = window.setTimeout(() => pollPaymentStatus(orderId), 3000);
+        }
+      };
+
       checkoutForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         if (checkoutInFlight) {
@@ -684,6 +881,7 @@
         checkoutInFlight = true;
         checkoutSubmit.disabled = true;
         checkoutStatus.textContent = 'Criando cobrança...';
+        checkoutHelp.hidden = true;
         checkoutResult.hidden = true;
         checkoutQr.hidden = true;
         checkoutPixCode.value = '';
@@ -692,75 +890,58 @@
         const customer = {
           name: String(formData.get('name') || '').trim(),
           email: String(formData.get('email') || '').trim(),
-          cpf: String(formData.get('cpf') || '').replace(/\D/g, ''),
-          phone: String(formData.get('phone') || '').trim(),
-          address: String(formData.get('address') || '').trim()
+          doc: String(formData.get('cpf') || '').replace(/\D/g, ''),
+          phone: String(formData.get('phone') || '').replace(/\D/g, '')
         };
 
         try {
-          const response = await fetch('/api/pix/create', {
+          let pendingOrder;
+          try {
+            pendingOrder = JSON.parse(sessionStorage.getItem('vaquinha-pending-order') || 'null');
+          } catch (error) {
+            sessionStorage.removeItem('vaquinha-pending-order');
+          }
+          const orderId = pendingOrder?.amount === selectedContribution && pendingOrder?.id
+            ? pendingOrder.id
+            : crypto.randomUUID();
+          sessionStorage.setItem(
+            'vaquinha-pending-order',
+            JSON.stringify({ id: orderId, amount: selectedContribution })
+          );
+
+          const response = await fetch('/api/charges', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+              orderId,
               amount: selectedContribution,
-              productType: 'DIGITAL',
-              description: 'Apoio à campanha da família Dany',
-              storeUrl: window.location.href,
-              customer
+              customer,
+              tracking: campaignTracking
             })
           });
-          const responseStatus = response.status;
-          const responseOk = response.ok;
-          const contentType = response.headers.get('content-type') || '';
-          const responseText = await response.text();
-          const mediaType = contentType.split(';', 1)[0].trim().toLowerCase();
-          const isJsonResponse = mediaType === 'application/json' || mediaType.endsWith('+json');
-          let payload = null;
-
-          if (isJsonResponse && responseText) {
-            try {
-              payload = JSON.parse(responseText);
-            } catch (error) {
-              payload = null;
-            }
+          const payload = await readApiResponse(response, 'Não foi possível criar a cobrança PIX.');
+          if (!payload.pixCode || !payload.qrCode) {
+            throw new Error('O processador de pagamento não retornou os dados necessários para o PIX.');
           }
 
-          if (!responseOk) {
-            const gatewayStatus = payload?.gatewayStatus;
-            const status = gatewayStatus || responseStatus;
-            const details = payload?.gatewayMessage || payload?.message || responseText;
-            const safeDetails = String(details || 'A API não retornou uma mensagem de erro.')
-              .slice(0, 1500);
-            const statusLabel = gatewayStatus ? 'FireBot HTTP ' : 'HTTP ';
-            throw new Error(statusLabel + status + ': ' + safeDetails);
-          }
-          if (!isJsonResponse) {
-            throw new Error('O serviço de cobrança retornou uma resposta inválida.');
-          }
-
-          if (!payload || typeof payload !== 'object') {
-            throw new Error('O serviço de cobrança retornou um JSON inválido.');
-          }
-          if (!payload.pixCopiaECola) {
-            throw new Error('Não foi possível obter os dados para concluir o pagamento.');
-          }
-
-          checkoutPixCode.value = payload.pixCopiaECola;
+          checkoutPixCode.value = payload.pixCode;
           document.getElementById('checkout-amount').textContent =
             'R$ ' + selectedContribution.toFixed(2).replace('.', ',');
           document.getElementById('checkout-transaction').textContent =
-            payload.transactionId || 'não informado';
+            payload.transactionId || 'pendente';
           document.getElementById('checkout-transaction-status').textContent =
-            payload.status || 'Pendente';
+            payload.status || 'PENDING';
 
-          if (payload.qrCodeUrl) {
-            checkoutQr.src = payload.qrCodeUrl;
-            checkoutQr.hidden = false;
-          }
+          checkoutQr.src = payload.qrCode;
+          checkoutQr.hidden = false;
           checkoutResult.hidden = false;
-          checkoutStatus.textContent = 'Cobrança criada. Conclua o pagamento pelo QR Code ou código.';
+          checkoutHelp.hidden = true;
+          checkoutStatus.textContent = payload.expiresAt
+            ? 'PIX válido até ' + new Date(payload.expiresAt).toLocaleString('pt-BR') + '. Aguardando pagamento.'
+            : 'Cobrança criada. Conclua o pagamento pelo QR Code ou código.';
+          pollPaymentStatus(payload.orderId);
         } catch (error) {
-          checkoutStatus.textContent = error.message || 'Não foi possível conectar ao serviço de cobrança.';
+          setCheckoutError(error, 'Não foi possível conectar ao serviço de cobrança.');
         } finally {
           checkoutInFlight = false;
           checkoutSubmit.disabled = false;
@@ -781,6 +962,21 @@
           checkoutStatus.textContent = 'Código copiado.';
         } catch (error) {
           checkoutStatus.textContent = error.message || 'Não foi possível copiar o código.';
+        }
+      });
+
+      document.getElementById('share-button').addEventListener('click', async () => {
+        try {
+          if (navigator.share) {
+            await navigator.share({ title: document.title, url: window.location.href });
+          } else {
+            await navigator.clipboard.writeText(window.location.href);
+            contributionStatus.textContent = 'Link da campanha copiado.';
+          }
+        } catch (error) {
+          if (error.name !== 'AbortError') {
+            contributionStatus.textContent = 'Não foi possível compartilhar o link.';
+          }
         }
       });
     </script>
