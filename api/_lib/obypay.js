@@ -136,7 +136,7 @@ export async function createCharge(order) {
       phone: order.customer?.phone || undefined,
       document: order.customer?.doc || order.customer?.document || undefined,
     },
-    items: [
+    products: [
       {
         name: "Doação para a campanha da Dany",
         quantity: 1,
