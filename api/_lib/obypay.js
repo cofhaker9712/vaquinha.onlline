@@ -128,8 +128,8 @@ export async function createCharge(order) {
   const payload = {
     amount: amountCents,
     description: "Doação para a campanha da Dany",
-    orderId: order.id,
-    webhookUrl: order.callbackUrl,
+    externalId: order.id,
+    webhook: order.callbackUrl,
     customer: {
       name: order.customer?.name || "Contribuinte",
       email: order.customer?.email || undefined,
