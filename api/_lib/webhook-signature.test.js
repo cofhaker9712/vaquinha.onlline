@@ -4,7 +4,7 @@ import test from "node:test";
 import { isValidWebhookSignature } from "./webhook-signature.js";
 
 test("accepts an HMAC-SHA256 signature for the exact raw request body", () => {
-  const body = Buffer.from('{"event":"transaction.paid","data":{"amount":50}}');
+  const body = Buffer.from('{"event":"payment.approved","data":{"amount":5000}}');
   const signature = createHmac("sha256", "unit-test-secret").update(body).digest("hex");
 
   assert.equal(isValidWebhookSignature(body, signature, "unit-test-secret"), true);

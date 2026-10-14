@@ -741,10 +741,10 @@
           return 'A API limitou temporariamente as cobranças. Aguarde antes de tentar novamente e evite clicar várias vezes.';
         }
         if (status === 400) {
-          return 'Confira os dados do formulário e os detalhes da resposta. Se os dados estiverem corretos, consulte os logs da função api/charges na Vercel.';
+          return 'Confira os dados do formulário. O valor precisa ser maior que 50 centavos e também cobrir as taxas aplicadas à sua conta ObyPay; tente uma contribuição maior.';
         }
         if (status >= 500) {
-          return 'Abra Vercel → Deployments → último deploy → Functions/Logs e confira api/charges. Verifique também OBYPAY_API_KEY, DATABASE_URL e APP_URL nas variáveis de ambiente; depois de alterá-las, faça Redeploy.';
+          return 'Abra Vercel → Deployments → último deploy → Functions/Logs e confira api/charges. Verifique também OBYPAY_API_KEY, DATABASE_URL (ou POSTGRES_URL) e APP_URL nas variáveis de ambiente; depois de alterá-las, faça Redeploy.';
         }
         return 'Confira sua conexão. Se continuar, abra Vercel → Deployments → último deploy → Functions/Logs e procure api/charges. Ao pedir ajuda, compartilhe a mensagem e o HTTP, mas nunca a chave API, CPF ou outros dados pessoais.';
       };
@@ -868,7 +868,7 @@
         }
 
         if (!checkoutModal.hidden) {
-          pollingTimer = window.setTimeout(() => pollPaymentStatus(orderId), 3000);
+          pollingTimer = window.setTimeout(() => pollPaymentStatus(orderId), 5000);
         }
       };
 

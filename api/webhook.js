@@ -25,20 +25,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const webhookSecret = process.env.OBYPAY_WEBHOOK_SECRET;
-    if (!webhookSecret) {
-      console.error("OBYPAY_WEBHOOK_SECRET não está configurado.");
-      sendJson(res, 503, { error: "O webhook ainda não está configurado." });
-      return;
-    }
-
     const rawBody = await readRawBody(req);
-    const signature = req.headers["obpay-signature"] ?? req.headers["x-obpay-signature"] ?? req.headers["x-signature"];
-    if (!isValidWebhookSignature(rawBody, signature, webhookSecret)) {
-      sendJson(res, 401, { error: "Assinatura do webhook inválida." });
-      return;
-    }
-
     let payload;
     try {
       payload = JSON.parse(rawBody.toString("utf8"));
@@ -46,28 +33,42 @@ export default async function handler(req, res) {
       throw new HttpError(400, "O corpo do webhook não contém JSON válido.");
     }
 
-    const data = payload?.data;
-    const event = payload?.event;
-    const orderId = data?.orderId ?? data?.externalId ?? data?.metadata?.pedido ?? data?.order_id;
-    const transactionId = data?.id ?? data?.transactionId ?? data?.transaction_id;
-    const amount = Number(data?.amount ?? data?.grossAmount ?? 0);
-    const statuses = {
-      "payment.approved": "PAID",
-      "payment.failed": "FAILED",
-      "payment.expired": "EXPIRED",
-      "payment.disputed": "MED",
-    };
-
-    if (typeof event !== "string"
-      || !["payment.created", ...Object.keys(statuses)].includes(event)
-      || typeof transactionId !== "string"
-      || typeof orderId !== "string"
-      || !Number.isFinite(amount)
-      || amount <= 0) {
-      throw new HttpError(400, "O webhook não contém os dados esperados da transação.");
+    if (payload?.event === "webhook.test") {
+      sendJson(res, 200, { received: true });
+      return;
     }
-    if (statuses[event] && data?.status && String(data.status).toUpperCase() !== statuses[event]) {
-      throw new HttpError(400, "O status do webhook não corresponde ao evento informado.");
+
+    const webhookSecret = process.env.OBYPAY_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      console.error("OBYPAY_WEBHOOK_SECRET não está configurado.");
+      sendJson(res, 503, { error: "O webhook ainda não está configurado." });
+      return;
+    }
+
+    if (!isValidWebhookSignature(
+      rawBody,
+      req.headers["obypay-signature"],
+      webhookSecret,
+    )) {
+      sendJson(res, 401, { error: "Assinatura do webhook inválida." });
+      return;
+    }
+
+    if (payload?.event !== "payment.approved") {
+      sendJson(res, 200, { received: true, ignored: true });
+      return;
+    }
+
+    const data = payload.data;
+    const transactionId = data?.id;
+    const orderId = data?.externalId;
+    const amountCents = data?.amount;
+    if (typeof transactionId !== "string" || !transactionId.trim()
+      || typeof orderId !== "string"
+      || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(orderId)
+      || !Number.isSafeInteger(amountCents)
+      || amountCents < 50) {
+      throw new HttpError(400, "O webhook não contém os dados esperados da cobrança aprovada.");
     }
 
     const sql = await getDatabase();
@@ -75,7 +76,8 @@ export default async function handler(req, res) {
       `WITH candidate AS (
          SELECT id
          FROM vaquinha_donation_orders
-         WHERE id = $3 AND transaction_id = $1 AND amount = $4
+         WHERE id = $3 AND amount = $4
+           AND (transaction_id IS NULL OR transaction_id = $1)
        ),
        accepted AS (
          INSERT INTO vaquinha_webhook_events (transaction_id, event)
@@ -85,9 +87,10 @@ export default async function handler(req, res) {
        ),
        updated AS (
          UPDATE vaquinha_donation_orders
-         SET status = $5,
-             paid_at = CASE WHEN $5 = 'PAID' THEN COALESCE($6::timestamptz, NOW()) ELSE paid_at END
-         WHERE id = $3 AND $5 IS NOT NULL AND status = 'PENDING'
+         SET transaction_id = COALESCE(transaction_id, $1),
+             status = 'PAID',
+             paid_at = COALESCE(paid_at, NOW())
+         WHERE id = $3 AND status IN ('PENDING', 'FAILED', 'EXPIRED')
            AND EXISTS (SELECT 1 FROM accepted)
          RETURNING id
        )
@@ -95,22 +98,20 @@ export default async function handler(req, res) {
          EXISTS (SELECT 1 FROM candidate) AS matched,
          EXISTS (SELECT 1 FROM accepted) AS first_delivery,
          EXISTS (SELECT 1 FROM updated) AS updated`,
-      [
-        transactionId,
-        event,
-        orderId,
-        amount / 100,
-        statuses[event] ?? null,
-        data?.paidAt ?? null,
-      ],
+      [transactionId, payload.event, orderId, amountCents / 100],
     );
 
     if (!result?.matched) {
-      console.error("Webhook ObyPay sem pedido correspondente ou com valor divergente.", { event });
+      console.error("Webhook ObyPay aprovado sem contribuição correspondente ou com valor divergente.", {
+        event: payload.event,
+      });
+      sendJson(res, 200, { received: true, matched: false });
+      return;
     }
+
     sendJson(res, 200, {
       received: true,
-      duplicate: result?.matched === true && result?.first_delivery !== true,
+      duplicate: result.first_delivery !== true,
     });
   } catch (error) {
     handleError(res, error);

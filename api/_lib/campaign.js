@@ -69,7 +69,7 @@ export function validateDonation(input) {
   };
 }
 
-export function getCallbackUrl() {
+export function getPublicAppUrl() {
   const appUrl = process.env.APP_URL;
   if (!appUrl) {
     throw new HttpError(503, "Configure a URL HTTPS pública do site para ativar os pagamentos.");
@@ -96,5 +96,9 @@ export function getCallbackUrl() {
     throw new HttpError(503, "Configure APP_URL com a origem HTTPS pública do site, sem caminhos extras.");
   }
 
-  return `${url.origin}/api/webhook`;
+  return url.origin;
+}
+
+export function getCallbackUrl() {
+  return `${getPublicAppUrl()}/api/webhook`;
 }

@@ -1,42 +1,45 @@
 # Integração PIX da campanha
 
-A página usa o HTML e o CSS originais da campanha. O checkout envia pedidos às funções serverless da Vercel; as chamadas ao ObyPay usam exclusivamente `process.env.OBYPAY_API_KEY` no servidor.
+O checkout do `index.html` chama as funções serverless da Vercel. A chave ObyPay permanece no servidor e nunca é enviada ao navegador.
 
-## O que mudou
+## Fluxo
 
-- O checkout no `index.html` continua chamando `POST /api/charges` e consulta o estado em `GET /api/charges/{orderId}`.
-- `api/_lib/obypay.js` implementa a API oficial do ObyPay. A chave vai no header `Authorization`, sem prefixo `Bearer`, e a cobrança usa valores em centavos; a resposta esperada contém `transactionId`, `copyPaste` e `expiresAt`.
-- `api/charges.js`, `api/charges/[orderId].js` e `api/webhook.js` criam/consultam cobranças e recebem eventos assinados ao padrão ObyPay.
-- `api/_lib/webhook-signature.js` valida o HMAC-SHA256 do corpo bruto com comparação em tempo constante.
-- `api/_lib/db.js` conecta ao Neon usando `DATABASE_URL`. Os pedidos da campanha usam tabelas PostgreSQL próprias, com prefixo `vaquinha_`, sem alterar tabelas existentes.
-- `migrations/001_create_vaquinha_donation_tables.sql` cria as tabelas de pedidos e eventos idempotentes.
-- A criação reutiliza a mesma `Idempotency-Key` e faz no máximo uma repetição para erros transitórios. Para HTTP 429, não repete antes do prazo: encaminha `Retry-After` ao cliente.
+- `POST /api/charges` valida os dados, registra o pedido em `vaquinha_donation_orders` e envia a cobrança a `POST https://api.obypay.app/transactions`.
+- A requisição ObyPay usa o header `Authorization` com a chave crua, sem `Bearer`, e os campos documentados `amount` (centavos), `webhook`, `description`, `externalId`, `storeUrl`, `customer` e `products`.
+- O `externalId` é o UUID do pedido local. Uma reserva atômica no banco impede que duas solicitações simultâneas criem cobranças duplicadas. A API não envia headers de idempotência que não estejam documentados. Em caso de timeout ou falha ambígua, a reserva permanece ativa para bloquear nova tentativa automática; reconcilie a transação no painel ObyPay antes de liberar o pedido.
+- A resposta mapeia `id`, `amount`, `copyPaste`, `qrCodeBase64` e `expiresAt`. O código Copia e Cola é salvo no banco; usa-se o QR Code recebido ou, se ausente, ele é gerado a partir do código PIX.
+- `GET /api/charges/{orderId}` lê o status local e não consulta a ObyPay em loop. O webhook assinado é a fonte primária de confirmação.
+- `POST /api/webhook` valida `obypay-signature` usando HMAC-SHA256 sobre os bytes originais do corpo. Só o evento documentado `payment.approved`, com `data.id`, `data.externalId` e o `data.amount` esperado em centavos, pode marcar a contribuição como paga. Reentregas são deduplicadas no banco. O `webhook.test` é respondido sem alterar pedidos.
+- Erros do provedor são registrados no servidor com HTTP, código e mensagem redigida. A resposta ao navegador é genérica e não inclui a mensagem interna do provedor.
 
-## Schema e migração
+## Dinheiro e taxas
 
-O projeto Vercel de produção usa `DATABASE_URL` e o domínio público do projeto como `APP_URL`. Antes do deploy, confirme que a conexão `DATABASE_URL` de Production aponta para o mesmo banco e branch. Não execute novamente a migration se as tabelas já existem.
+Os valores exibidos pela campanha são reais inteiros e são convertidos uma vez para centavos inteiros ao montar a solicitação. A ObyPay documenta mínimo de 50 centavos e exige que o valor da cobrança seja maior que a soma das taxas da conta. As taxas e limites são específicos da conta; a API ObyPay é quem aplica essa validação. Em caso de HTTP 400, o checkout orienta conferir os dados e tentar valor maior. Não cobramos taxa por fora nem alteramos o valor selecionado.
 
-Não rode testes de cobrança contra o ambiente de produção. A suíte local usa respostas simuladas e não cria cobranças.
+## Banco e migrações
 
-## Variáveis na Vercel
+O banco PostgreSQL/Neon existente é conectado por `DATABASE_URL` ou, quando fornecida pela integração do Vercel/Neon, `POSTGRES_URL` (`DATABASE_URL` tem precedência). Os pedidos usam tabelas próprias com prefixo `vaquinha_`.
 
-Configure em **Project → Settings → Environment Variables** para Production (e Preview, se for testar lá):
+- `migrations/001_create_vaquinha_donation_tables.sql`: tabelas de pedidos e eventos webhook.
+- `migrations/002_add_charge_creation_claim.sql`: coluna aditiva que reserva a criação de uma cobrança e evita duplicatas concorrentes. A migração usa `ADD COLUMN IF NOT EXISTS` e não remove dados.
 
-- `DATABASE_URL`: fornecida pela integração Neon conectada ao projeto.
-- `OBYPAY_API_KEY`: chave de API gerada em **Integrações → Credenciais** no painel ObyPay.
-- `OBYPAY_WEBHOOK_SECRET`: secret do webhook ObyPay; é diferente da chave de API e necessário para autenticar callbacks.
-- `APP_URL`: origem pública HTTPS estável do projeto confirmado, sem barra final.
+Antes do deploy, abra o projeto/branch Neon usado pelo `POSTGRES_URL` ou `DATABASE_URL`, entre em **SQL Editor**, cole o conteúdo de `migrations/002_add_charge_creation_claim.sql` e execute. A operação só adiciona a coluna; não apaga nem altera contribuições existentes. Não execute novamente a migration 001 se as tabelas já existem.
 
-Não use um prefixo `NEXT_PUBLIC_` para segredos. Não compartilhe essas credenciais em commits, capturas de tela ou mensagens. `.env.example` contém apenas nomes das variáveis, sem valores.
+## Variáveis da Vercel
 
-No ObyPay, configure a callback como `<APP_URL>/api/webhook`, usando o domínio público efetivo do projeto. A função verifica a assinatura `obpay-signature` sobre os bytes originais, confere ID e valor do pedido, e deduplica eventos por transação e tipo. O polling é mantido como alternativa ao webhook.
+Em **Project → Settings → Environment Variables**, configure para Production (e Preview, se necessário):
 
-Se o checkout receber HTTP 405 em `POST /api/charges`, confira se a Vercel está usando a raiz do repositório (onde está a pasta `api/`) como **Root Directory** e faça um novo deploy incluindo as funções serverless. A função responde JSON quando é executada; um 405 vazio normalmente indica que a requisição não chegou à função.
+- `OBYPAY_API_KEY`: usada em `api/_lib/obypay.js`; chave com o escopo `payments.create` e, para leitura de transações, `payments.read`. O código envia-a crua no header `Authorization`.
+- `OBYPAY_WEBHOOK_SECRET`: usada em `api/webhook.js` para validar a assinatura do webhook.
+- `DATABASE_URL` ou `POSTGRES_URL`: usadas em `api/_lib/db.js` para conectar ao banco existente. O projeto Vercel conectado ao Neon já fornece `POSTGRES_URL`; configure `DATABASE_URL` somente se preferir usar uma URL específica.
+- `APP_URL`: usada em `api/_lib/campaign.js` para construir `webhook = <APP_URL>/api/webhook` e `storeUrl = <APP_URL>`. Deve ser apenas a origem HTTPS pública do domínio de produção, sem caminho, query ou fragmento.
 
-## Testes e publicação
+Para este deploy, a URL pública da aplicação é `https://vaquinhaonlline-6u93.vercel.app`; configure `APP_URL` com essa origem exata. Nunca use prefixo `NEXT_PUBLIC_` nos segredos e não os coloque em commits, frontend ou mensagens.
 
-Rode `npm install` e `npm test`. Os testes fazem mocks locais e não geram cobranças reais. Confira também `npm audit --omit=dev`.
+No painel ObyPay, configure um webhook ativo para `<APP_URL>/api/webhook` com o evento `payment.approved`; copie a secret do webhook para `OBYPAY_WEBHOOK_SECRET`. A API ObyPay documenta também chamadas HTTP `GET /transactions/:id` para reconciliação manual; nenhuma cobrança real é criada pela suíte de testes.
 
-Depois de executar a migração e configurar todas as variáveis, publique o commit na branch vinculada à Vercel ou aguarde o deploy automático do GitHub. Verifique o build e os logs das funções. O teste final de pagamento deve usar o ambiente e o procedimento de testes autorizados pelo gateway; não use uma cobrança real sem autorização.
+## Verificações e publicação
 
-Os valores da meta, arrecadação e contadores permanecem os mesmos do HTML original. A API registra os pedidos e status de pagamento, mas não atualiza automaticamente esses números exibidos na página.
+Execute `npm test` para rodar testes locais com respostas simuladas. `vercel build --prod` valida o pacote das funções sem criar cobranças. Não rode testes de cobrança contra produção.
+
+O projeto foi configurado para a raiz do repositório na Vercel, com preset **Other**. Os valores de meta, arrecadação e contadores continuam estáticos e não são alterados automaticamente pelos pagamentos.

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getCallbackUrl, validateDonation } from "./campaign.js";
+import { getCallbackUrl, getPublicAppUrl, validateDonation } from "./campaign.js";
 
 const orderId = "550e8400-e29b-41d4-a716-446655440000";
 const customer = {
@@ -50,6 +50,7 @@ test("builds the public HTTPS webhook URL and rejects a local callback", () => {
   const original = process.env.APP_URL;
   try {
     process.env.APP_URL = "https://vaquinha.example.com";
+    assert.equal(getPublicAppUrl(), "https://vaquinha.example.com");
     assert.equal(getCallbackUrl(), "https://vaquinha.example.com/api/webhook");
     process.env.APP_URL = "http://localhost:3000";
     assert.throws(() => getCallbackUrl(), { status: 503 });
